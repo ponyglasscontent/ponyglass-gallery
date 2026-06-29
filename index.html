@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Portfolio — Video Gallery</title>
+<meta name="description" content="Video portfolio gallery." />
+<link rel="preconnect" href="https://i.ytimg.com" />
+<link rel="preconnect" href="https://www.youtube-nocookie.com" />
+<style>
+  :root{
+    --bg:#303033;
+    --fg:#f5f5f7;
+    --muted:#b6b6bb;
+    --line:rgba(255,255,255,.08);
+    --card:#3a3a3e;
+    --shadow:0 1px 2px rgba(0,0,0,.25), 0 12px 28px rgba(0,0,0,.28);
+    --shadow-hover:0 2px 6px rgba(0,0,0,.3), 0 20px 48px rgba(0,0,0,.4);
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);
+    font-family:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  .wrap{max-width:1400px;margin:0 auto;padding:32px 20px 64px}
+  header{margin:8px 0 28px}
+  h1{font-size:clamp(22px,3vw,30px);font-weight:600;letter-spacing:-.01em;margin:0 0 6px}
+  header p{margin:0;color:var(--muted);font-size:14px}
+
+  /* 1 col mobile → 2 col tablet → 4 col desktop */
+  .grid{display:grid;gap:20px;grid-template-columns:1fr}
+  @media (min-width:640px){ .grid{grid-template-columns:repeat(2,minmax(0,1fr))} }
+  @media (min-width:1024px){ .grid{grid-template-columns:repeat(4,minmax(0,1fr))} }
+
+  .card{position:relative;background:var(--card);border:1px solid var(--line);
+    border-radius:var(--radius);overflow:hidden;cursor:pointer;
+    box-shadow:var(--shadow);
+    transition:transform .25s ease, box-shadow .25s ease;
+    padding:0;color:inherit;font:inherit;text-align:left;width:100%;display:block}
+  .card:hover{transform:translateY(-3px);box-shadow:var(--shadow-hover)}
+  .card:focus-visible{outline:2px solid #fff;outline-offset:3px}
+
+  .thumb{position:relative;aspect-ratio:16/9;background:#222;overflow:hidden}
+  .thumb img{width:100%;height:100%;object-fit:cover;display:block;
+    transition:transform .5s ease, opacity .3s ease, filter .3s ease}
+  .card:hover .thumb img{transform:scale(1.05);opacity:.35;filter:brightness(.6)}
+
+
+  .play{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;
+    transition:opacity .2s ease}
+  .play span{width:54px;height:54px;border-radius:50%;background:rgba(255,255,255,.92);
+    display:grid;place-items:center;box-shadow:0 6px 16px rgba(0,0,0,.35);
+    transition:transform .25s ease, background .25s ease}
+  .play span::after{content:"";display:block;border-style:solid;border-width:9px 0 9px 14px;
+    border-color:transparent transparent transparent #0f1115;margin-left:4px}
+
+  /* Hover overlay with title + description */
+  .overlay{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;
+    padding:18px 18px 16px;
+    background:linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(0,0,0,.55) 65%, rgba(0,0,0,.88) 100%);
+    opacity:0;transition:opacity .25s ease;pointer-events:none}
+  .card:hover .overlay,
+  .card:focus-visible .overlay{opacity:1}
+  .card:hover .play{opacity:0}
+  .overlay h3{margin:0 0 6px;font-size:15px;font-weight:600;line-height:1.3;color:#fff}
+  .overlay p{margin:0;font-size:12.5px;line-height:1.5;color:rgba(255,255,255,.85);
+    display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+
+  /* Caption shown when not hovering (touch devices keep this visible) */
+  .meta{padding:14px 16px 16px}
+  .title{font-size:14px;font-weight:500;line-height:1.4;margin:0;color:var(--fg)}
+
+  /* Lightbox */
+  .lb{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;
+    align-items:center;justify-content:center;padding:24px;z-index:1000}
+  .lb.open{display:flex}
+  .lb-box{width:95vw;max-width:1200px;max-height:90vh;background:#000;
+    border-radius:12px;overflow:hidden;display:flex;flex-direction:column;
+    box-shadow:0 30px 80px rgba(0,0,0,.6);position:relative}
+  .lb-video{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;
+    background:#000;padding:0 2px}
+  .lb-video-inner{width:100%;max-height:100%;aspect-ratio:16/9;position:relative}
+  .lb-video-inner iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
+  .lb-desc{padding:16px 20px;background:#1a1a1d;color:#fff;
+    max-height:140px;overflow-y:auto}
+  .lb-desc h3{margin:0 0 8px;font-size:16px;font-weight:600;line-height:1.3}
+  .lb-desc p{margin:0;font-size:14px;line-height:1.5;color:rgba(255,255,255,.85);white-space:pre-wrap}
+  .lb-close{position:absolute;top:12px;right:12px;z-index:10;width:38px;height:38px;
+    border-radius:50%;background:rgba(0,0,0,.65);border:1px solid rgba(255,255,255,.25);
+    color:#fff;font-size:20px;line-height:1;cursor:pointer;display:grid;place-items:center;
+    box-shadow:0 4px 12px rgba(0,0,0,.4);transition:background .2s ease, transform .2s ease, border-color .2s ease}
+  .lb-close:hover{background:rgba(0,0,0,.9);transform:scale(1.08);border-color:rgba(255,255,255,.5)}
+  @media (max-width:520px){
+    .wrap{padding:20px 14px 40px}
+    .grid{gap:14px}
+    .lb{padding:12px}
+    .lb-box{width:98vw;max-height:95vh}
+    .lb-desc{padding:12px 14px;max-height:120px}
+    .lb-desc h3{font-size:15px}
+    .lb-desc p{font-size:13px}
+    .lb-close{top:8px;right:8px;width:34px;height:34px;font-size:18px}
+  }
+
+  /* Gallery w/ side nav arrows */
+  .gallery{position:relative}
+  .nav{position:absolute;top:50%;transform:translateY(-50%);z-index:5;
+    width:44px;height:44px;border-radius:50%;border:0;cursor:pointer;
+    background:rgba(255,255,255,.92);color:#0f1115;font-size:26px;line-height:1;
+    display:grid;place-items:center;box-shadow:0 6px 18px rgba(0,0,0,.4);
+    transition:transform .2s ease, background .2s ease, opacity .2s ease}
+  .nav:hover{background:#fff;transform:translateY(-50%) scale(1.06)}
+  .nav:disabled{opacity:.3;cursor:not-allowed}
+  .nav.prev{left:-22px}
+  .nav.next{right:-22px}
+  @media (max-width:520px){
+    .nav{width:38px;height:38px;font-size:22px}
+    .nav.prev{left:-6px}
+    .nav.next{right:-6px}
+  }
+  .dots{display:flex;gap:8px;justify-content:center;margin-top:24px}
+  .dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.25);
+    border:0;padding:0;cursor:pointer;transition:background .2s ease, transform .2s ease}
+  .dot.active{background:#fff;transform:scale(1.3)}
+
+  /* On touch (no hover) make the overlay always visible at low opacity at the bottom */
+  @media (hover:none){
+    .overlay{opacity:1;background:linear-gradient(180deg,rgba(0,0,0,0) 50%, rgba(0,0,0,.85) 100%)}
+    .overlay p{-webkit-line-clamp:2}
+    .meta{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Portfolio</h1>
+    <p>Click a video to play.</p>
+  </header>
+  <div class="gallery">
+    <button class="nav prev" id="prev" aria-label="Previous videos">&#8249;</button>
+    <div class="grid" id="grid" role="list"></div>
+    <button class="nav next" id="next" aria-label="More videos">&#8250;</button>
+  </div>
+  <div class="dots" id="dots" aria-hidden="true"></div>
+</div>
+
+
+<div class="lb" id="lb" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Video player">
+  <div class="lb-box">
+    <button class="lb-close" id="lbClose" aria-label="Close video">&#10005;</button>
+    <div class="lb-video">
+      <div class="lb-video-inner" id="lbMount"></div>
+    </div>
+    <div class="lb-desc" id="lbDesc"></div>
+  </div>
+</div>
+
+<script>
+  // YouTube Data API config — key is restricted by HTTP referrer in Google Cloud Console.
+  const API_KEY = "AIzaSyCzodQFKupPmAhJwKLx37qKkDeU80SoHnA";
+  const PLAYLIST_ID = "PLBKV6nTASw6M";
+
+  // Fallback list used if the API call fails (e.g. quota, network).
+  const FALLBACK_VIDEOS = [
+    { id: "-S1a5I3tSuQ", title: "Hiking App (animated promo video)", desc: "TOOLS: Image (Nano), Video (Veo), Editing (Capcut), Music (Suno)" },
+    { id: "3Q1hO75pQas", title: "Kavana Underwear (AI UGC Ad)", desc: "TOOLS: Image (Nano), Video (Kling, Veo), Editing (Capcut), Upscale (Topaz), Voice over (ElevenLabs)" },
+    { id: "5ZkBAeiTJ5w", title: "Carly: The Mascot's Mascot (Photorealistic Scripted Scene)", desc: "TOOLS: Image & Video (Google Flow: Nano, Veo), Editing (Capcut), Voices & sound fx (ElevenLabs)" },
+    { id: "GrfYcJA-RSs", title: "Emcee Directory (Cartoon animated Ad)", desc: "TOOLS: Image & Video (Google Flow: Nano, Veo), Editing (Capcut), Voices & sound fx (ElevenLabs)" },
+    { id: "Na_IuSeKmyU", title: "Romy's Rescue (Kids Show)", desc: "TOOLS: Image (Nano), Video (Kling, Veo, Seedance), Lipsync (OmniHuman), Editing (Capcut), Upscale (Topaz), Music (Suno), Voices & sound fx (ElevenLabs), Sound editing (Audacity)" },
+    { id: "XBdcoVtnk-0", title: "LA Rams: Operation Goldilocks (Photorealistic Scripted Scene)", desc: "TOOLS: Image & Video (Google Flow: Nano, Veo), Editing (Capcut), Voices & sound fx (ElevenLabs), Music (Suno)" },
+    { id: "ZpHlU8SeDrE", title: "Lunapops (Educational Kids YT Show)", desc: "TOOLS: Image (Nano), Video (Kling, Veo, Seedance), Editing (Capcut), Music (Suno), Voices & sound fx (ElevenLabs)" },
+    { id: "lqdbbtcgrc4", title: "Sip Margarita (Product Hero Video)", desc: "TOOLS: Image (Nano), Video (Veo), Editing (Capcut), Music (ElevenLabs)" },
+    { id: "m_EGIKqjhhs", title: "My Employment App (Promo Video)", desc: "TOOLS: Image (Nano), Video (Veo), Editing (Capcut), Music (ElevenLabs)" },
+    { id: "sqByklYAlZU", title: "Liquid Death Energy Drink (Scripted Cartoon)", desc: "TOOLS: Image & Video (Google Flow: Nano, Veo), Editing (Capcut), Voices & sound fx (ElevenLabs)" },
+  ];
+
+  const esc = s => (s || "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const thumb = id => `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+
+  const grid = document.getElementById("grid");
+  const lb = document.getElementById("lb");
+  const lbMount = document.getElementById("lbMount");
+  const lbDesc = document.getElementById("lbDesc");
+  const lbClose = document.getElementById("lbClose");
+  const prevBtn = document.getElementById("prev");
+  const nextBtn = document.getElementById("next");
+  const dotsEl = document.getElementById("dots");
+
+  const PAGE_SIZE = 8;
+  let ALL = [];
+  let page = 0;
+
+  async function fetchPlaylist() {
+    const items = [];
+    let pageToken = "";
+    do {
+      const url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=50&playlistId=${PLAYLIST_ID}&key=${API_KEY}${pageToken ? `&pageToken=${pageToken}` : ""}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`YouTube API ${res.status}`);
+      const data = await res.json();
+      for (const it of data.items || []) {
+        const s = it.snippet || {};
+        if (s.title === "Deleted video" || s.title === "Private video") continue;
+        const vid = s.resourceId && s.resourceId.videoId;
+        if (!vid) continue;
+        items.push({ id: vid, title: s.title || "", desc: s.description || "", position: s.position ?? 0 });
+      }
+      pageToken = data.nextPageToken || "";
+    } while (pageToken);
+    items.sort((a, b) => a.position - b.position);
+    return items;
+  }
+
+  function renderPage() {
+    const totalPages = Math.max(1, Math.ceil(ALL.length / PAGE_SIZE));
+    if (page >= totalPages) page = totalPages - 1;
+    if (page < 0) page = 0;
+    const start = page * PAGE_SIZE;
+    const slice = ALL.slice(start, start + PAGE_SIZE);
+
+    grid.innerHTML = "";
+    slice.forEach(v => {
+      const card = document.createElement("button");
+      card.className = "card";
+      card.setAttribute("role","listitem");
+      card.setAttribute("aria-label", `Play: ${v.title}`);
+      card.innerHTML = `
+        <div class="thumb">
+          <img loading="lazy" src="${thumb(v.id)}" alt="">
+          <div class="play"><span></span></div>
+          <div class="overlay">
+            <h3>${esc(v.title)}</h3>
+            <p>${esc(v.desc)}</p>
+          </div>
+        </div>
+        <div class="meta"><p class="title">${esc(v.title)}</p></div>`;
+      card.addEventListener("click", () => openLb(v));
+      grid.appendChild(card);
+    });
+
+    prevBtn.disabled = page === 0;
+    nextBtn.disabled = page >= totalPages - 1;
+    prevBtn.style.display = totalPages > 1 ? "" : "none";
+    nextBtn.style.display = totalPages > 1 ? "" : "none";
+
+    dotsEl.innerHTML = "";
+    if (totalPages > 1) {
+      for (let i = 0; i < totalPages; i++) {
+        const d = document.createElement("button");
+        d.className = "dot" + (i === page ? " active" : "");
+        d.setAttribute("aria-label", `Page ${i+1}`);
+        d.addEventListener("click", () => { page = i; renderPage(); });
+        dotsEl.appendChild(d);
+      }
+    }
+  }
+
+  prevBtn.addEventListener("click", () => { page--; renderPage(); });
+  nextBtn.addEventListener("click", () => { page++; renderPage(); });
+
+  (async () => {
+    try {
+      const videos = await fetchPlaylist();
+      ALL = videos.length ? videos : FALLBACK_VIDEOS;
+    } catch (err) {
+      console.warn("Falling back to static video list:", err);
+      ALL = FALLBACK_VIDEOS;
+    }
+    renderPage();
+  })();
+
+
+
+  function openLb(v){
+    lbMount.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${v.id}?autoplay=1&rel=0&modestbranding=1" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+    lbDesc.innerHTML = `<h3>${esc(v.title)}</h3><p>${esc(v.desc)}</p>`;
+    lb.classList.add("open");
+    lb.setAttribute("aria-hidden","false");
+    document.body.style.overflow = "hidden";
+  }
+  function closeLb(){
+    lb.classList.remove("open");
+    lb.setAttribute("aria-hidden","true");
+    lbMount.innerHTML = "";
+    lbDesc.innerHTML = "";
+    document.body.style.overflow = "";
+  }
+  lbClose.addEventListener("click", closeLb);
+  lb.addEventListener("click", e => { if(e.target === lb) closeLb(); });
+  document.addEventListener("keydown", e => { if(e.key === "Escape") closeLb(); });
+</script>
+</body>
+</html>
